@@ -1,0 +1,12 @@
+#compdef git-sync-all
+_git-sync-all() {
+  _arguments \
+    '--help[Show help]' \
+    '--version[Show version]' \
+    '--dry-run[Print actions without changing the repository]' \
+    '1:branch name:->branches'
+  if [[ $state == branches ]]; then
+    _git-branches
+  fi
+}
+_git-sync-all

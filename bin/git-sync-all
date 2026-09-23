@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# git-sync-all [--dry-run] [<branch>]
+#
+# Sync a repository and all of its submodules. Install this executable on PATH
+# and Git exposes it as `git sync-all` automatically.
+set -euo pipefail
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+readonly VERSION="0.1.0"
+readonly RC_NO_SUCH_BRANCH=3
+DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
+
+usage() {
+  cat <<'EOF'
+usage: git sync-all [--dry-run] [<branch>]
+
+  git sync-all                 each repo -> its default branch, then pull
+  git sync-all pmc             repos that have 'pmc' -> pmc, then pull
+  git sync-all --dry-run pmc   show what would change without changing it
+
+Repos lacking an explicitly requested branch are left untouched and reported
+at the end. A requested branch is never created locally.
+EOF
+}
+
+die() {
+  printf 'git-sync-all: %s\n' "$*" >&2
+  exit 2
+}
+
+run() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '+ '
+    printf '%q ' "$@"
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+default_branch() {
+  local b c
+  b="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')" || b=""
+  if [ -z "$b" ] && [ "$DRY_RUN" -eq 0 ]; then
+    git remote set-head origin --auto >/dev/null 2>&1 || true
+    b="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')" || b=""
+  fi
+  if [ -z "$b" ]; then
+    for c in main master trunk develop; do
+      if git show-ref --verify --quiet "refs/remotes/origin/$c"; then
+        b="$c"
+        break
+      fi
+    done
+  fi
+  [ -n "$b" ] || b="$(git symbolic-ref --short HEAD 2>/dev/null || echo main)"
+  printf '%s\n' "$b"
+}
+
+has_branch() {
+  git show-ref --verify --quiet "refs/heads/$1" \
+    || git show-ref --verify --quiet "refs/remotes/origin/$1"
+}
+
+target_branch() {
+  local hint="${1:-}" want="${SYNC_ALL_BRANCH:-}"
+  if [ -n "$want" ]; then
+    has_branch "$want" || return "$RC_NO_SUCH_BRANCH"
+    printf '%s\n' "$want"
+    return 0
+  fi
+  [ -n "$hint" ] && { printf '%s\n' "$hint"; return 0; }
+  default_branch
+}
+
+sync_here() {
+  local b rc=0
+  b="$(target_branch "${1:-}")" || rc=$?
+  [ "$rc" -eq 0 ] || return "$rc"
+
+  if git show-ref --verify --quiet "refs/heads/$b"; then
+    run git checkout "$b"
+  else
+    run git checkout --track "origin/$b"
+  fi
+
+  if git rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
+    run git pull
+  else
+    printf 'note: %s has no upstream — skipped pull\n' "$b" >&2
+  fi
+}
+
+if [ "${1:-}" = "--submodule" ]; then
+  name="${2:-}"
+  toplevel="${3:-}"
+  hint="$(git config -f "$toplevel/.gitmodules" "submodule.$name.branch" 2>/dev/null || true)"
+  [ "$hint" = "." ] && hint=""
+  sync_here "$hint"
+  exit $?
+fi
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --version) printf 'git-sync-all %s\n' "$VERSION"; exit 0 ;;
+    --dry-run) DRY_RUN=1 ;;
+    --) shift; break ;;
+    -*) die "unknown option: $1" ;;
+    *)
+      [ -z "${SYNC_ALL_BRANCH:-}" ] || die 'only one branch may be supplied'
+      export SYNC_ALL_BRANCH="$1"
+      ;;
+  esac
+  shift
+done
+[ "$#" -eq 0 ] || die 'only one branch may be supplied'
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'run this inside a Git work tree'
+
+skipped_root=0
+sync_here || {
+  rc=$?
+  if [ "$rc" -eq "$RC_NO_SUCH_BRANCH" ]; then
+    skipped_root=1
+    printf "note: superproject has no branch '%s' — left on %s\n\n" \
+      "${SYNC_ALL_BRANCH:-}" "$(git symbolic-ref --short HEAD 2>/dev/null || echo '?')" >&2
+  else
+    exit "$rc"
+  fi
+}
+
+if [ -f .gitmodules ]; then
+  update_failed=0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '+ git submodule update --init --recursive\n'
+  elif ! git submodule update --init --recursive; then
+    printf '\n!! some submodules failed to init/update (see above) — continuing\n\n' >&2
+    update_failed=1
+  fi
+
+  failures="$(mktemp)"
+  skips="$(mktemp)"
+  trap 'rm -f "$failures" "$skips"' EXIT
+
+  git submodule foreach --quiet --recursive "
+    SYNC_ALL_DRY_RUN='$DRY_RUN' bash '$SELF' --submodule \"\$name\" \"\$toplevel\"; rc=\$?
+    if [ \$rc -eq $RC_NO_SUCH_BRANCH ]; then echo \"\$displaypath\" >>'$skips'
+    elif [ \$rc -ne 0 ]; then echo \"\$displaypath\" >>'$failures'
+    fi"
+
+  if [ -s "$skips" ]; then
+    printf "\n-- no '%s' branch, left untouched (%s):\n" \
+      "${SYNC_ALL_BRANCH:-}" "$(wc -l <"$skips" | tr -d ' ')" >&2
+    sed 's/^/  - /' "$skips" >&2
+  fi
+  if [ -s "$failures" ]; then
+    printf '\n!! failed to sync these submodules (%s):\n' "$(wc -l <"$failures" | tr -d ' ')" >&2
+    sed 's/^/  - /' "$failures" >&2
+    exit 1
+  fi
+  [ "$update_failed" -eq 0 ] || exit 1
+fi
+
+exit 0
