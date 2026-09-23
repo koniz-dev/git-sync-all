@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# git-sync-all [--dry-run] [<branch>]
+# git-sync-all [--dry-run] [--rebase] [<branch>]
 #
 # Sync a repository and all of its submodules. Install this executable on PATH
 # and Git exposes it as `git sync-all` automatically.
 set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-readonly VERSION="0.1.0"
+readonly VERSION="0.2.0"
 readonly RC_NO_SUCH_BRANCH=3
 DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
+PULL_REBASE="${SYNC_ALL_REBASE:-0}"
 
 usage() {
   cat <<'EOF'
-usage: git sync-all [--dry-run] [<branch>]
+usage: git sync-all [--dry-run] [--rebase] [<branch>]
 
   git sync-all                 each repo -> its default branch, then pull
   git sync-all pmc             repos that have 'pmc' -> pmc, then pull
   git sync-all --dry-run pmc   show what would change without changing it
+  git sync-all --rebase        pull each branch with rebase
 
 Repos lacking an explicitly requested branch are left untouched and reported
 at the end. A requested branch is never created locally.
@@ -85,7 +87,11 @@ sync_here() {
   fi
 
   if git rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
-    run git pull
+    if [ "$PULL_REBASE" -eq 1 ]; then
+      run git pull --rebase
+    else
+      run git pull
+    fi
   else
     printf 'note: %s has no upstream — skipped pull\n' "$b" >&2
   fi
@@ -105,6 +111,10 @@ while [ "$#" -gt 0 ]; do
     -h|--help) usage; exit 0 ;;
     --version) printf 'git-sync-all %s\n' "$VERSION"; exit 0 ;;
     --dry-run) DRY_RUN=1 ;;
+    --rebase)
+      PULL_REBASE=1
+      export SYNC_ALL_REBASE=1
+      ;;
     --) shift; break ;;
     -*) die "unknown option: $1" ;;
     *)

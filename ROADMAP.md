@@ -22,9 +22,9 @@ gh release create v0.1.0 --title "v0.1.0" --generate-notes
 ## v0.2.0 — Reliability
 
 - [x] Thêm test tự động cho repository thường, branch thiếu, remote thiếu và submodule lồng nhau.
-- [ ] Chạy ShellCheck trong GitHub Actions.
-- [ ] Thêm CI chạy `bash -n` và smoke test.
-- [ ] Bổ sung cờ `--rebase` hoặc cấu hình pull strategy rõ ràng.
+- [x] Chạy ShellCheck trong GitHub Actions.
+- [x] Thêm CI chạy `bash -n` và smoke test.
+- [x] Bổ sung cờ `--rebase` hoặc cấu hình pull strategy rõ ràng.
 
 ## v0.3.0 — Cross-platform support
 

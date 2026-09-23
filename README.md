@@ -8,7 +8,7 @@ subcommand: `git sync-all`.
 ## Install
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/git-sync-all.git
+git clone https://github.com/koniz-dev/git-sync-all.git
 cd git-sync-all
 ./install.sh
 ```
@@ -28,6 +28,7 @@ Run inside the superproject:
 git sync-all              # default branch in every repository
 git sync-all feature/foo  # only repositories that already have feature/foo
 git sync-all --dry-run    # print checkout and pull commands only
+git sync-all --rebase     # rebase local commits while pulling
 ```
 
 With an explicit branch, a repository that does not have that branch locally
@@ -38,6 +39,10 @@ superproject's default-branch behavior.
 
 `--dry-run` does not initialise missing submodules; it reports the init command
 and simulates changes only for submodules that are already available locally.
+
+By default, `git sync-all` uses `git pull`, respecting the pull strategy
+configured in each repository. Pass `--rebase` to use `git pull --rebase` for
+the superproject and every submodule.
 
 ## Shell completion
 

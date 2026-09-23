@@ -4,6 +4,7 @@ _git-sync-all() {
     '--help[Show help]' \
     '--version[Show version]' \
     '--dry-run[Print actions without changing the repository]' \
+    '--rebase[Pull with rebase]' \
     '1:branch name:->branches'
   if [[ $state == branches ]]; then
     _git-branches

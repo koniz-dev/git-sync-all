@@ -93,6 +93,15 @@ test_missing_remote() {
     || fail 'a branch without a remote was not handled gracefully'
 }
 
+test_rebase_option() {
+  make_remote rebase
+  run_git clone -q "$TMP_DIR/rebase.git" "$TMP_DIR/rebase-clone"
+  local output
+  output="$(cd "$TMP_DIR/rebase-clone" && "$COMMAND" --dry-run --rebase 2>&1)"
+  [[ "$output" == *'+ git pull --rebase '* ]] \
+    || fail '--rebase did not select git pull --rebase'
+}
+
 test_nested_submodules() {
   make_remote grandchild
   local child_work="$TMP_DIR/child-work" child_remote="$TMP_DIR/child.git"
@@ -132,5 +141,6 @@ test_nested_submodules() {
 test_regular_repository
 test_missing_branch
 test_missing_remote
+test_rebase_option
 test_nested_submodules
 printf 'All git-sync-all integration tests passed.\n'
