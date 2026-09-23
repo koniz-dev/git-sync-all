@@ -2,14 +2,14 @@
 
 ## v0.1.0 — Publish
 
-- [x] Tách command thành executable `bin/git-sync-all`.
-- [x] Thêm installer, Bash/Zsh completion, README và MIT License.
-- [x] Thêm `--help`, `--version`, `--dry-run`.
-- [x] Kiểm tra cú pháp và smoke test local.
-- [x] Commit và publish repository `koniz-dev/git-sync-all`.
-- [x] Tạo GitHub Release `v0.1.0` với release notes ngắn.
+- [x] Extract the command into the `bin/git-sync-all` executable.
+- [x] Add an installer, Bash/Zsh completion, README, and MIT License.
+- [x] Add `--help`, `--version`, and `--dry-run`.
+- [x] Run syntax checks and local smoke tests.
+- [x] Commit and publish the `koniz-dev/git-sync-all` repository.
+- [x] Create the `v0.1.0` GitHub Release with short release notes.
 
-Publish từ một terminal đã đăng nhập GitHub:
+Publish from a terminal authenticated with GitHub:
 
 ```bash
 cd /Users/nguyenanhkiet/Playground/git-sync-all
@@ -21,31 +21,31 @@ gh release create v0.1.0 --title "v0.1.0" --generate-notes
 
 ## v0.2.0 — Reliability
 
-- [x] Thêm test tự động cho repository thường, branch thiếu, remote thiếu và submodule lồng nhau.
-- [x] Chạy ShellCheck trong GitHub Actions.
-- [x] Thêm CI chạy `bash -n` và smoke test.
-- [x] Bổ sung cờ `--rebase` hoặc cấu hình pull strategy rõ ràng.
+- [x] Add automated tests for regular repositories, missing branches, missing remotes, and nested submodules.
+- [x] Run ShellCheck in GitHub Actions.
+- [x] Add CI for `bash -n` and smoke tests.
+- [x] Add a `--rebase` flag or document a clear pull strategy.
 
 ## v0.3.0 — Cross-platform support
 
-Mục tiêu là bảo đảm command hoạt động trên macOS, Linux và Windows, thay vì
-chỉ dựa vào Bash có sẵn.
+Ensure the command works on macOS, Linux, and Windows instead of relying only
+on the Bash available on the development machine.
 
-- [x] Xác định ma trận hỗ trợ chính thức: macOS, Ubuntu LTS và Windows 11.
-- [x] Giữ bản Bash cho macOS/Linux và Git Bash/WSL trên Windows.
-- [x] Thêm installer PowerShell (`install.ps1`) cho Windows native.
-- [x] Đảm bảo `git-sync-all` được nhận là Git subcommand từ PATH trên Windows.
-- [x] Kiểm tra các dependency và đường dẫn tạm thay cho các giả định Unix-only
-  như `mktemp`, `sed`, `wc` và `tr`.
-- [x] Nếu Git for Windows không đủ tương thích, tách phần điều phối sang
-  PowerShell hoặc phát hành binary đa nền tảng.
-- [x] Thêm GitHub Actions matrix chạy smoke test trên `macos-latest`,
-  `ubuntu-latest` và `windows-latest`.
-- [x] Ghi rõ trong README các môi trường đã kiểm thử và các fallback được hỗ trợ
-  (Git Bash/WSL trên Windows).
+- [x] Define the official support matrix: macOS, Ubuntu LTS, and Windows 11.
+- [x] Keep the Bash implementation for macOS/Linux and Git Bash/WSL on Windows.
+- [x] Add a PowerShell installer (`install.ps1`) for native Windows use.
+- [x] Ensure `git-sync-all` is recognized as a Git subcommand from PATH on Windows.
+- [x] Check dependencies and temporary paths for Unix-only assumptions such as
+  `mktemp`, `sed`, `wc`, and `tr`.
+- [x] If Git for Windows is insufficiently compatible, move orchestration to
+  PowerShell or release a cross-platform binary.
+- [x] Add a GitHub Actions matrix that runs smoke tests on `macos-latest`,
+  `ubuntu-latest`, and `windows-latest`.
+- [x] Document the tested environments and supported fallbacks in the README
+  (Git Bash/WSL on Windows).
 
 ## v0.4.0 — Distribution
 
-- [x] Tạo Homebrew tap và formula `git-sync-all`.
-- [x] Cài completion tự động qua installer (có tùy chọn opt-in).
-- [x] Thêm uninstall script.
+- [x] Create a Homebrew tap and the `git-sync-all` formula.
+- [x] Install completion automatically through the installer with an opt-in option.
+- [x] Add uninstall scripts.
