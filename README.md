@@ -57,6 +57,7 @@ metadata and audit requirements.
 ```bash
 bash -n bin/git-sync-all install.sh
 bin/git-sync-all --help
+bash test/test-git-sync-all.sh
 ```
 
 Contributions are welcome under the MIT License.
