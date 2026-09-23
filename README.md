@@ -20,6 +20,25 @@ on your `PATH`, then verify the installation:
 git sync-all --version
 ```
 
+Pass `--completions` to install the bundled Bash and Zsh completions under the
+same prefix:
+
+```bash
+./install.sh --completions
+```
+
+To remove the command, run `./uninstall.sh`; add `--completions` to remove the
+completion files too. Neither command removes directories or other files.
+
+### Homebrew
+
+```bash
+brew tap koniz-dev/tap
+brew install git-sync-all
+```
+
+The formula installs the command and Bash/Zsh completions.
+
 ### Windows
 
 The command is supported on Windows 11 through Git Bash or WSL. For a native
@@ -34,6 +53,12 @@ It installs the Bash command and a `git-sync-all.cmd` wrapper in
 terminal and run `git sync-all --version`. The wrapper runs the command with
 Git Bash, so Git's Unix utilities (`mktemp`, `sed`, `wc`, and `tr`) are
 available without a separate dependency.
+
+Remove the Windows installation with:
+
+```powershell
+.\uninstall.ps1
+```
 
 ## Supported environments
 
@@ -71,18 +96,10 @@ the superproject and every submodule.
 For zsh, copy `completions/_git-sync-all` into a directory on `fpath`. For
 Bash, source `completions/git-sync-all.bash` from your shell profile.
 
-## Release as a Homebrew tap
-
-After publishing a tagged GitHub release, create a tap repository containing a
-formula which installs `bin/git-sync-all`. The initial version can simply fetch
-the tagged source archive and use `bin.install "bin/git-sync-all"`; add its
-SHA-256 to the formula. See Homebrew's Formula Cookbook for the current formula
-metadata and audit requirements.
-
 ## Development
 
 ```bash
-bash -n bin/git-sync-all install.sh
+bash -n bin/git-sync-all install.sh uninstall.sh
 bin/git-sync-all --help
 bash test/test-git-sync-all.sh
 ```
@@ -91,6 +108,7 @@ On Windows, also validate the PowerShell installer:
 
 ```powershell
 .\install.ps1 -Prefix "$env:TEMP\git-sync-all-bin" -NoPath
+.\uninstall.ps1 -Prefix "$env:TEMP\git-sync-all-bin"
 ```
 
 Contributions are welcome under the MIT License.

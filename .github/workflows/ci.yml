@@ -17,7 +17,7 @@ jobs:
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install --yes shellcheck
       - name: Run ShellCheck
-        run: shellcheck bin/git-sync-all install.sh test/test-git-sync-all.sh
+        run: shellcheck bin/git-sync-all install.sh uninstall.sh test/test-git-sync-all.sh
 
   test:
     name: ${{ matrix.os }} integration tests
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run integration tests
         run: |
-          bash -n bin/git-sync-all install.sh test/test-git-sync-all.sh
+          bash -n bin/git-sync-all install.sh uninstall.sh test/test-git-sync-all.sh
           bash test/test-git-sync-all.sh
       - name: Verify the Windows installer and Git subcommand
         if: runner.os == 'Windows'

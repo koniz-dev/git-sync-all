@@ -102,6 +102,25 @@ test_rebase_option() {
     || fail '--rebase did not select git pull --rebase'
 }
 
+test_installer_and_uninstaller() {
+  local prefix="$TMP_DIR/install-prefix"
+  bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null
+  [ -x "$prefix/bin/git-sync-all" ] || fail 'installer did not install the command'
+  [ -f "$prefix/share/bash-completion/completions/git-sync-all" ] \
+    || fail 'installer did not install the Bash completion'
+  [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
+    || fail 'installer did not install the Zsh completion'
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.4.0' ] \
+    || fail 'installed command did not report the expected version'
+
+  bash "$ROOT_DIR/uninstall.sh" --prefix "$prefix" --completions >/dev/null
+  [ ! -e "$prefix/bin/git-sync-all" ] || fail 'uninstaller did not remove the command'
+  [ ! -e "$prefix/share/bash-completion/completions/git-sync-all" ] \
+    || fail 'uninstaller did not remove the Bash completion'
+  [ ! -e "$prefix/share/zsh/site-functions/_git-sync-all" ] \
+    || fail 'uninstaller did not remove the Zsh completion'
+}
+
 test_nested_submodules() {
   make_remote grandchild
   local child_work="$TMP_DIR/child-work" child_remote="$TMP_DIR/child.git"
@@ -142,5 +161,6 @@ test_regular_repository
 test_missing_branch
 test_missing_remote
 test_rebase_option
+test_installer_and_uninstaller
 test_nested_submodules
 printf 'All git-sync-all integration tests passed.\n'

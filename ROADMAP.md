@@ -46,6 +46,6 @@ chỉ dựa vào Bash có sẵn.
 
 ## v0.4.0 — Distribution
 
-- [ ] Tạo Homebrew tap và formula `git-sync-all`.
-- [ ] Cài completion tự động qua installer (có tùy chọn opt-in).
-- [ ] Thêm uninstall script.
+- [x] Tạo Homebrew tap và formula `git-sync-all`.
+- [x] Cài completion tự động qua installer (có tùy chọn opt-in).
+- [x] Thêm uninstall script.
