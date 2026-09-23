@@ -6,8 +6,8 @@
 - [x] Thêm installer, Bash/Zsh completion, README và MIT License.
 - [x] Thêm `--help`, `--version`, `--dry-run`.
 - [x] Kiểm tra cú pháp và smoke test local.
-- [ ] Commit và publish repository `koniz-dev/git-sync-all`.
-- [ ] Tạo GitHub Release `v0.1.0` với release notes ngắn.
+- [x] Commit và publish repository `koniz-dev/git-sync-all`.
+- [x] Tạo GitHub Release `v0.1.0` với release notes ngắn.
 
 Publish từ một terminal đã đăng nhập GitHub:
 
