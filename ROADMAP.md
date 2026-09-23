@@ -31,17 +31,17 @@ gh release create v0.1.0 --title "v0.1.0" --generate-notes
 Mục tiêu là bảo đảm command hoạt động trên macOS, Linux và Windows, thay vì
 chỉ dựa vào Bash có sẵn.
 
-- [ ] Xác định ma trận hỗ trợ chính thức: macOS, Ubuntu LTS và Windows 11.
-- [ ] Giữ bản Bash cho macOS/Linux và Git Bash/WSL trên Windows.
-- [ ] Thêm installer PowerShell (`install.ps1`) cho Windows native.
-- [ ] Đảm bảo `git-sync-all` được nhận là Git subcommand từ PATH trên Windows.
-- [ ] Kiểm tra các dependency và đường dẫn tạm thay cho các giả định Unix-only
+- [x] Xác định ma trận hỗ trợ chính thức: macOS, Ubuntu LTS và Windows 11.
+- [x] Giữ bản Bash cho macOS/Linux và Git Bash/WSL trên Windows.
+- [x] Thêm installer PowerShell (`install.ps1`) cho Windows native.
+- [x] Đảm bảo `git-sync-all` được nhận là Git subcommand từ PATH trên Windows.
+- [x] Kiểm tra các dependency và đường dẫn tạm thay cho các giả định Unix-only
   như `mktemp`, `sed`, `wc` và `tr`.
-- [ ] Nếu Git for Windows không đủ tương thích, tách phần điều phối sang
+- [x] Nếu Git for Windows không đủ tương thích, tách phần điều phối sang
   PowerShell hoặc phát hành binary đa nền tảng.
-- [ ] Thêm GitHub Actions matrix chạy smoke test trên `macos-latest`,
+- [x] Thêm GitHub Actions matrix chạy smoke test trên `macos-latest`,
   `ubuntu-latest` và `windows-latest`.
-- [ ] Ghi rõ trong README các môi trường đã kiểm thử và các fallback được hỗ trợ
+- [x] Ghi rõ trong README các môi trường đã kiểm thử và các fallback được hỗ trợ
   (Git Bash/WSL trên Windows).
 
 ## v0.4.0 — Distribution

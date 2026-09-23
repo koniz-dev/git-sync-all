@@ -9,16 +9,37 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: ShellCheck and integration tests
+  shellcheck:
+    name: ShellCheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install --yes shellcheck
-      - name: Check shell syntax
-        run: bash -n bin/git-sync-all install.sh test/test-git-sync-all.sh
       - name: Run ShellCheck
         run: shellcheck bin/git-sync-all install.sh test/test-git-sync-all.sh
+
+  test:
+    name: ${{ matrix.os }} integration tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
       - name: Run integration tests
-        run: bash test/test-git-sync-all.sh
+        run: |
+          bash -n bin/git-sync-all install.sh test/test-git-sync-all.sh
+          bash test/test-git-sync-all.sh
+      - name: Verify the Windows installer and Git subcommand
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $prefix = Join-Path $env:RUNNER_TEMP 'git-sync-all-bin'
+          .\install.ps1 -Prefix $prefix -NoPath
+          $env:PATH = "$prefix;$env:PATH"
+          git sync-all --version

@@ -20,6 +20,28 @@ on your `PATH`, then verify the installation:
 git sync-all --version
 ```
 
+### Windows
+
+The command is supported on Windows 11 through Git Bash or WSL. For a native
+PowerShell prompt with Git for Windows installed, use the PowerShell installer:
+
+```powershell
+.\install.ps1
+```
+
+It installs the Bash command and a `git-sync-all.cmd` wrapper in
+`~\.local\bin`, then adds that directory to the user `PATH`. Open a new
+terminal and run `git sync-all --version`. The wrapper runs the command with
+Git Bash, so Git's Unix utilities (`mktemp`, `sed`, `wc`, and `tr`) are
+available without a separate dependency.
+
+## Supported environments
+
+The supported environments are macOS, Ubuntu LTS, and Windows 11. On Windows,
+use Git Bash, WSL, or the PowerShell installer with Git for Windows. CI runs
+the syntax and integration suite on `macos-latest`, `ubuntu-latest`, and
+`windows-latest` (with Git Bash).
+
 ## Usage
 
 Run inside the superproject:
@@ -63,6 +85,12 @@ metadata and audit requirements.
 bash -n bin/git-sync-all install.sh
 bin/git-sync-all --help
 bash test/test-git-sync-all.sh
+```
+
+On Windows, also validate the PowerShell installer:
+
+```powershell
+.\install.ps1 -Prefix "$env:TEMP\git-sync-all-bin" -NoPath
 ```
 
 Contributions are welcome under the MIT License.
