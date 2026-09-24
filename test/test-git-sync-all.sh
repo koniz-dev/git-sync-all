@@ -268,7 +268,7 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Bash completion'
   [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'installer did not install the Zsh completion'
-  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.6.0' ] \
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.6.1' ] \
     || fail 'installed command did not report the expected version'
 
   if bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null 2>&1; then

@@ -135,7 +135,7 @@ tag locally with:
 ```bash
 git config gpg.format ssh
 git config gpg.ssh.allowedSignersFile keys/allowed_signers
-git verify-tag v0.6.0
+git verify-tag v0.6.1
 ```
 
 To rotate a release signer, add the replacement public key to
