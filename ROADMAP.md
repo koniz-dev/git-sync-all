@@ -83,7 +83,9 @@ on the Bash available on the development machine.
 - [x] Test quoted repository paths on Windows or document the platform
   limitation explicitly.
 - [x] Align the documented Windows support claim with the actual CI targets.
-- [ ] Document release-signing key rotation and configure a backup signer.
+- [x] Document release-signing-key rotation.
+- [ ] Add an independently controlled backup public signing key to
+  `keys/allowed_signers` and verify a release signed by it.
 
 ### Residual risks
 
