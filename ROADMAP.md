@@ -74,10 +74,10 @@ on the Bash available on the development machine.
 
 ## v0.6.0 — Correctness and operational resilience
 
-- [ ] Refresh `origin` refs before resolving default or requested branches.
-- [ ] Make `--json` report skipped and failed outcomes accurately.
+- [x] Refresh `origin` refs before resolving default or requested branches.
+- [x] Make `--json` report skipped and failed outcomes accurately.
 - [ ] Make the release workflow idempotent when re-run.
-- [ ] Make the PowerShell installer resilient to Unicode paths and avoid
+- [x] Make the PowerShell installer resilient to Unicode paths and avoid
   selecting an unrelated `bash` executable from `PATH`.
 - [ ] Test quoted repository paths on Windows or document the platform
   limitation explicitly.
