@@ -8,9 +8,12 @@
 set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-readonly VERSION="0.6.1"
+readonly VERSION="0.7.0"
 readonly RC_NO_SUCH_BRANCH=3
 readonly RC_DIRTY_WORKTREE=4
+readonly RC_FETCH_FAILED=5
+readonly RC_CHECKOUT_FAILED=6
+readonly RC_PULL_FAILED=7
 DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
 PULL_MODE="${SYNC_ALL_PULL_MODE:-ff-only}"
 ALLOW_DIRTY="${SYNC_ALL_ALLOW_DIRTY:-0}"
@@ -170,21 +173,27 @@ sync_here() {
     printf 'note: working tree is dirty — left untouched (use --allow-dirty to override)\n' >&2
     return "$RC_DIRTY_WORKTREE"
   fi
-  refresh_origin
+  if ! refresh_origin; then
+    return "$RC_FETCH_FAILED"
+  fi
   b="$(target_branch "${1:-}")" || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
 
   if git show-ref --verify --quiet "refs/heads/$b"; then
-    run git checkout "$b"
+    if ! run git checkout "$b"; then
+      return "$RC_CHECKOUT_FAILED"
+    fi
   else
-    run git checkout --track "origin/$b"
+    if ! run git checkout --track "origin/$b"; then
+      return "$RC_CHECKOUT_FAILED"
+    fi
   fi
 
   if git rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
     case "$PULL_MODE" in
-      ff-only) run git pull --ff-only ;;
-      rebase) run git pull --rebase ;;
-      merge) run git pull --no-rebase ;;
+      ff-only) run git pull --ff-only || return "$RC_PULL_FAILED" ;;
+      rebase) run git pull --rebase || return "$RC_PULL_FAILED" ;;
+      merge) run git pull --no-rebase || return "$RC_PULL_FAILED" ;;
     esac
   else
     printf 'note: %s has no upstream — skipped pull\n' "$b" >&2
@@ -250,20 +259,32 @@ export GIT_SYNC_ALL_SELF="$SELF"
 require_runtime
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'run this inside a Git work tree'
 
-sync_here || {
+if sync_here; then
+  :
+else
   rc=$?
   if [ "$rc" -eq "$RC_NO_SUCH_BRANCH" ]; then
     OUTCOME="skipped"
     REASON="branch_missing"
     printf "note: superproject has no branch '%s' — left on %s\n\n" \
       "${SYNC_ALL_BRANCH:-}" "$(git symbolic-ref --short HEAD 2>/dev/null || echo '?')" >&2
-  else
+  elif [ "$rc" -eq "$RC_DIRTY_WORKTREE" ]; then
     OUTCOME="failed"
     REASON="dirty_worktree"
     emit_summary
     exit "$rc"
+  else
+    OUTCOME="failed"
+    case "$rc" in
+      "$RC_FETCH_FAILED") REASON="fetch_failed" ;;
+      "$RC_CHECKOUT_FAILED") REASON="checkout_failed" ;;
+      "$RC_PULL_FAILED") REASON="pull_failed" ;;
+      *) REASON="sync_failed" ;;
+    esac
+    emit_summary
+    exit "$rc"
   fi
-}
+fi
 
 if [ -f .gitmodules ] && [ "$NO_SUBMODULES" -eq 0 ]; then
   update_failed=0

@@ -35,7 +35,8 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Run integration tests
         run: |
-          bash -n bin/git-sync-all install.sh uninstall.sh test/test-git-sync-all.sh
+          test -x scripts/publish-release-assets.sh
+          bash -n bin/git-sync-all install.sh uninstall.sh scripts/publish-release-assets.sh test/test-git-sync-all.sh
           bash test/test-git-sync-all.sh
       - name: Verify the Windows installer, subcommand, and uninstaller
         if: runner.os == 'Windows'

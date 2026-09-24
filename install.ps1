@@ -22,11 +22,6 @@ function Find-GitBash {
     }
   }
 
-  $bash = Get-Command bash -ErrorAction SilentlyContinue
-  if ($bash) {
-    return $bash.Source
-  }
-
   throw 'Git Bash was not found. Install Git for Windows, then run this installer again.'
 }
 

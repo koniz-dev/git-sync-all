@@ -170,9 +170,15 @@ test_divergent_history() {
     run_git commit -qm 'Remote change'
     run_git push -q
   )
-  if (cd "$TMP_DIR/divergent-local" && "$COMMAND") >/dev/null 2>&1; then
+  local output rc
+  if output="$(cd "$TMP_DIR/divergent-local" && "$COMMAND" --json 2>&1)"; then
     fail 'fast-forward-only sync accepted divergent history'
+  else
+    rc=$?
   fi
+  [ "$rc" -eq 7 ] || fail 'a failed pull did not return the expected error'
+  [[ "$output" == *'"status":"failed"'* && "$output" == *'"reason":"pull_failed"'* ]] \
+    || fail 'JSON did not report a failed pull accurately'
 }
 
 test_force_push() {
@@ -268,7 +274,7 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Bash completion'
   [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'installer did not install the Zsh completion'
-  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.6.1' ] \
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.7.0' ] \
     || fail 'installed command did not report the expected version'
 
   if bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null 2>&1; then
@@ -282,6 +288,25 @@ test_installer_and_uninstaller() {
     || fail 'uninstaller did not remove the Bash completion'
   [ ! -e "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'uninstaller did not remove the Zsh completion'
+}
+
+test_fetch_failure() {
+  make_remote fetch-failure
+  local clone="$TMP_DIR/fetch-failure-clone" before output rc
+  run_git clone -q "$TMP_DIR/fetch-failure.git" "$clone"
+  before="$(run_git -C "$clone" rev-parse HEAD)"
+  mv "$TMP_DIR/fetch-failure.git" "$TMP_DIR/fetch-failure-gone.git"
+
+  if output="$(cd "$clone" && "$COMMAND" --json 2>&1)"; then
+    rc=0
+  else
+    rc=$?
+  fi
+  [ "$rc" -eq 5 ] || fail 'a failed fetch did not return the expected error'
+  [ "$(run_git -C "$clone" rev-parse HEAD)" = "$before" ] \
+    || fail 'a failed fetch changed HEAD'
+  [[ "$output" == *'"status":"failed"'* && "$output" == *'"reason":"fetch_failed"'* ]] \
+    || fail 'JSON did not report a failed fetch accurately'
 }
 
 test_nested_submodules() {
@@ -363,6 +388,7 @@ test_regular_repository
 test_missing_branch
 test_remote_branch_refresh
 test_missing_remote
+test_fetch_failure
 test_rebase_option
 test_ff_only_default
 test_dirty_repository

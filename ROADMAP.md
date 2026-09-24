@@ -99,3 +99,16 @@ on the Bash available on the development machine.
 - **Release-provider behavior:** the idempotent release helper is unit-tested
   with a local `gh` mock. Its live GitHub behavior remains covered only when a
   release workflow runs with GitHub-provided credentials.
+
+## v0.7.0 — Failure reporting and distribution consistency
+
+- [x] Stop immediately when `fetch`, `checkout`, or `pull` fails and report a
+  specific JSON failure reason.
+- [x] Add regression coverage for an unreachable `origin` remote.
+- [x] Require the release publisher to be executable in CI.
+- [x] Restrict the PowerShell installer to Bash distributed with Git for
+  Windows instead of falling back to an unrelated `bash` on `PATH`.
+- [x] Align the Windows installation wording with the environments actually
+  verified by CI.
+- [ ] Update the Homebrew formula to install the v0.7.0 release archive and
+  verify it in the tap.

@@ -44,8 +44,8 @@ The formula installs the command and Bash/Zsh completions.
 
 ### Windows
 
-The command is supported on Windows 11 through Git Bash or WSL. For a native
-PowerShell prompt with Git for Windows installed, use the PowerShell installer:
+On Windows, use Git Bash or WSL. For a native PowerShell prompt with Git for
+Windows installed, use the PowerShell installer:
 
 ```powershell
 .\install.ps1
@@ -135,7 +135,7 @@ tag locally with:
 ```bash
 git config gpg.format ssh
 git config gpg.ssh.allowedSignersFile keys/allowed_signers
-git verify-tag v0.6.1
+git verify-tag v0.7.0
 ```
 
 To rotate a release signer, add the replacement public key to
