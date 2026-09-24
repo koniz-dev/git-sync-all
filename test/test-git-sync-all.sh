@@ -129,6 +129,105 @@ test_dirty_repository() {
     || fail 'a dirty repository was not reported'
 }
 
+test_divergent_history() {
+  make_remote divergent
+  run_git clone -q "$TMP_DIR/divergent.git" "$TMP_DIR/divergent-local"
+  run_git clone -q "$TMP_DIR/divergent.git" "$TMP_DIR/divergent-remote"
+  (
+    cd "$TMP_DIR/divergent-local"
+    printf '%s\n' 'local commit' > LOCAL
+    run_git add LOCAL
+    run_git commit -qm 'Local change'
+  )
+  (
+    cd "$TMP_DIR/divergent-remote"
+    printf '%s\n' 'remote commit' > REMOTE
+    run_git add REMOTE
+    run_git commit -qm 'Remote change'
+    run_git push -q
+  )
+  if (cd "$TMP_DIR/divergent-local" && "$COMMAND") >/dev/null 2>&1; then
+    fail 'fast-forward-only sync accepted divergent history'
+  fi
+}
+
+test_force_push() {
+  make_remote force-push
+  run_git clone -q "$TMP_DIR/force-push.git" "$TMP_DIR/force-push-local"
+  run_git clone -q "$TMP_DIR/force-push.git" "$TMP_DIR/force-push-remote"
+  (
+    cd "$TMP_DIR/force-push-remote"
+    printf '%s\n' 'replacement history' > REPLACED
+    run_git add REPLACED
+    run_git commit -qm 'Replacement commit'
+    run_git push -q
+    run_git -C "$TMP_DIR/force-push-local" pull -q
+    run_git reset --hard -q HEAD~1
+    printf '%s\n' 'forced history' > FORCED
+    run_git add FORCED
+    run_git commit -qm 'Forced update'
+    run_git push --force -q
+  )
+  if (cd "$TMP_DIR/force-push-local" && "$COMMAND") >/dev/null 2>&1; then
+    fail 'fast-forward-only sync accepted a force-push'
+  fi
+}
+
+test_rebase_conflict() {
+  make_remote rebase-conflict
+  run_git clone -q "$TMP_DIR/rebase-conflict.git" "$TMP_DIR/rebase-conflict-local"
+  run_git clone -q "$TMP_DIR/rebase-conflict.git" "$TMP_DIR/rebase-conflict-remote"
+  (
+    cd "$TMP_DIR/rebase-conflict-local"
+    printf '%s\n' 'local change' > README
+    run_git commit -am 'Local change' -q
+  )
+  (
+    cd "$TMP_DIR/rebase-conflict-remote"
+    printf '%s\n' 'remote change' > README
+    run_git commit -am 'Remote change' -q
+    run_git push -q
+  )
+  if (cd "$TMP_DIR/rebase-conflict-local" && "$COMMAND" --rebase) >/dev/null 2>&1; then
+    fail 'rebase sync accepted a conflict'
+  fi
+}
+
+test_special_paths_and_dry_run() {
+  make_remote special-path
+  local clone="$TMP_DIR/clone with ' quote"
+  run_git clone -q "$TMP_DIR/special-path.git" "$clone"
+  run_git clone -q "$TMP_DIR/special-path.git" "$TMP_DIR/special-path-update"
+  (
+    cd "$TMP_DIR/special-path-update"
+    printf '%s\n' 'remote update' > README
+    run_git commit -am 'Remote update' -q
+    run_git push -q
+  )
+  local before output
+  before="$(run_git -C "$clone" rev-parse HEAD)"
+  output="$(cd "$clone" && "$COMMAND" --dry-run 2>&1)"
+  [ "$(run_git -C "$clone" rev-parse HEAD)" = "$before" ] \
+    || fail 'dry-run changed HEAD'
+  assert_file_contains "$clone/README" 'special-path initial'
+  [[ "$output" == *'+ git pull --ff-only '* ]] || fail 'dry-run did not report pull'
+}
+
+test_automation_options() {
+  make_remote automation
+  run_git clone -q "$TMP_DIR/automation.git" "$TMP_DIR/automation-clone"
+  local before output
+  before="$(run_git -C "$TMP_DIR/automation-clone" rev-parse HEAD)"
+  (
+    cd "$TMP_DIR/automation-clone"
+    "$COMMAND" --fetch-only --json > "$TMP_DIR/automation.json"
+  ) 2>/dev/null
+  [ "$(run_git -C "$TMP_DIR/automation-clone" rev-parse HEAD)" = "$before" ] \
+    || fail 'fetch-only changed HEAD'
+  output="$(<"$TMP_DIR/automation.json")"
+  [[ "$output" == *'"fetch_only":true'* ]] || fail 'JSON summary did not report fetch-only'
+}
+
 test_installer_and_uninstaller() {
   local prefix="$TMP_DIR/install-prefix"
   bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null
@@ -139,6 +238,11 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Zsh completion'
   [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.5.0-dev' ] \
     || fail 'installed command did not report the expected version'
+
+  if bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null 2>&1; then
+    fail 'installer overwrote an existing installation without --force'
+  fi
+  bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions --force >/dev/null
 
   bash "$ROOT_DIR/uninstall.sh" --prefix "$prefix" --completions >/dev/null
   [ ! -e "$prefix/bin/git-sync-all" ] || fail 'uninstaller did not remove the command'
@@ -205,6 +309,11 @@ test_missing_remote
 test_rebase_option
 test_ff_only_default
 test_dirty_repository
+test_divergent_history
+test_force_push
+test_rebase_conflict
+test_special_paths_and_dry_run
+test_automation_options
 test_installer_and_uninstaller
 test_nested_submodules
 printf 'All git-sync-all integration tests passed.\n'

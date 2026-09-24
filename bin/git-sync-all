@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # git-sync-all [--dry-run] [--ff-only|--rebase|--merge] [--allow-dirty]
-#              [--init-submodules] [<branch>]
+#              [--init-submodules] [--fetch-only] [--no-submodules]
+#              [--verbose] [--json] [<branch>]
 #
 # Sync a repository and all of its submodules. Install this executable on PATH
 # and Git exposes it as `git sync-all` automatically.
@@ -14,11 +15,16 @@ DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
 PULL_MODE="${SYNC_ALL_PULL_MODE:-ff-only}"
 ALLOW_DIRTY="${SYNC_ALL_ALLOW_DIRTY:-0}"
 INIT_SUBMODULES="${SYNC_ALL_INIT_SUBMODULES:-0}"
+FETCH_ONLY="${SYNC_ALL_FETCH_ONLY:-0}"
+NO_SUBMODULES="${SYNC_ALL_NO_SUBMODULES:-0}"
+VERBOSE="${SYNC_ALL_VERBOSE:-0}"
+JSON="${SYNC_ALL_JSON:-0}"
 
 usage() {
   cat <<'EOF'
 usage: git sync-all [--dry-run] [--ff-only|--rebase|--merge] [--allow-dirty]
-                     [--init-submodules] [<branch>]
+                     [--init-submodules] [--fetch-only] [--no-submodules]
+                     [--verbose] [--json] [<branch>]
 
   git sync-all                   each repo -> default branch, fast-forward only
   git sync-all pmc               repos that have 'pmc' -> pmc, then pull
@@ -26,6 +32,8 @@ usage: git sync-all [--dry-run] [--ff-only|--rebase|--merge] [--allow-dirty]
   git sync-all --rebase          pull each branch with rebase
   git sync-all --merge           pull each branch with a merge
   git sync-all --init-submodules initialize missing submodules before syncing
+  git sync-all --fetch-only      fetch origin without checkout or pull
+  git sync-all --no-submodules   sync only the superproject
 
 Repos lacking an explicitly requested branch are left untouched and reported
 at the end. A requested branch is never created locally. Dirty repositories are
@@ -45,14 +53,57 @@ require_flag() {
   esac
 }
 
+require_runtime() {
+  local git_version
+  [ "${BASH_VERSINFO[0]}" -gt 3 ] \
+    || { [ "${BASH_VERSINFO[0]}" -eq 3 ] && [ "${BASH_VERSINFO[1]}" -ge 2 ]; } \
+    || die 'Bash 3.2 or later is required'
+  git_version="$(git --version 2>/dev/null)" \
+    || die 'Git 2.20 or later is required'
+  if [[ ! "$git_version" =~ ([0-9]+)\.([0-9]+) ]]; then
+    die "could not determine Git version from: $git_version"
+  fi
+  if [ "${BASH_REMATCH[1]}" -lt 2 ] \
+    || { [ "${BASH_REMATCH[1]}" -eq 2 ] && [ "${BASH_REMATCH[2]}" -lt 20 ]; }; then
+    die 'Git 2.20 or later is required'
+  fi
+}
+
+print_command() {
+  printf '+ ' >&2
+  printf '%q ' "$@" >&2
+  printf '\n' >&2
+}
+
 run() {
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '+ '
-    printf '%q ' "$@"
-    printf '\n'
+    print_command "$@"
   else
-    "$@"
+    [ "$VERBOSE" -eq 0 ] || print_command "$@"
+    if [ "$JSON" -eq 1 ]; then
+      "$@" >&2
+    else
+      "$@"
+    fi
   fi
+}
+
+json_string() {
+  printf '"'
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+  printf '"'
+}
+
+emit_summary() {
+  [ "$JSON" -eq 1 ] || return 0
+  printf '{"status":"ok","branch":'
+  if [ -n "${SYNC_ALL_BRANCH:-}" ]; then json_string "$SYNC_ALL_BRANCH"; else printf 'null'; fi
+  printf ',"pull_mode":'
+  json_string "$PULL_MODE"
+  printf ',"dry_run":%s,"fetch_only":%s,"submodules":%s}\n' \
+    "$([ "$DRY_RUN" -eq 1 ] && echo true || echo false)" \
+    "$([ "$FETCH_ONLY" -eq 1 ] && echo true || echo false)" \
+    "$([ "$NO_SUBMODULES" -eq 1 ] && echo false || echo true)"
 }
 
 default_branch() {
@@ -92,8 +143,16 @@ target_branch() {
 
 sync_here() {
   local b rc=0
+  if [ "$FETCH_ONLY" -eq 1 ]; then
+    if git remote get-url origin >/dev/null 2>&1; then
+      run git fetch --prune origin
+    else
+      printf 'note: no origin remote — skipped fetch\n' >&2
+    fi
+    return 0
+  fi
   if [ "$ALLOW_DIRTY" -ne 1 ] \
-    && [ -n "$(git status --porcelain=v1 --untracked-files=all)" ]; then
+    && [ -n "$(git status --porcelain=v1 --untracked-files=all --ignore-submodules=all)" ]; then
     printf 'note: working tree is dirty — left untouched (use --allow-dirty to override)\n' >&2
     return "$RC_DIRTY_WORKTREE"
   fi
@@ -118,6 +177,7 @@ sync_here() {
 }
 
 if [ "${1:-}" = "--submodule" ]; then
+  require_runtime
   name="${2:-}"
   toplevel="${3:-}"
   hint="$(git config -f "$toplevel/.gitmodules" "submodule.$name.branch" 2>/dev/null || true)"
@@ -136,6 +196,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --allow-dirty) ALLOW_DIRTY=1 ;;
     --init-submodules) INIT_SUBMODULES=1 ;;
+    --fetch-only) FETCH_ONLY=1 ;;
+    --no-submodules) NO_SUBMODULES=1 ;;
+    --verbose) VERBOSE=1 ;;
+    --json) JSON=1 ;;
     --) shift; break ;;
     -*) die "unknown option: $1" ;;
     *)
@@ -150,6 +214,10 @@ done
 require_flag SYNC_ALL_DRY_RUN "$DRY_RUN"
 require_flag SYNC_ALL_ALLOW_DIRTY "$ALLOW_DIRTY"
 require_flag SYNC_ALL_INIT_SUBMODULES "$INIT_SUBMODULES"
+require_flag SYNC_ALL_FETCH_ONLY "$FETCH_ONLY"
+require_flag SYNC_ALL_NO_SUBMODULES "$NO_SUBMODULES"
+require_flag SYNC_ALL_VERBOSE "$VERBOSE"
+require_flag SYNC_ALL_JSON "$JSON"
 case "$PULL_MODE" in
   ff-only|rebase|merge) ;;
   *) die 'SYNC_ALL_PULL_MODE must be ff-only, rebase, or merge' ;;
@@ -158,7 +226,12 @@ export SYNC_ALL_DRY_RUN="$DRY_RUN"
 export SYNC_ALL_PULL_MODE="$PULL_MODE"
 export SYNC_ALL_ALLOW_DIRTY="$ALLOW_DIRTY"
 export SYNC_ALL_INIT_SUBMODULES="$INIT_SUBMODULES"
+export SYNC_ALL_FETCH_ONLY="$FETCH_ONLY"
+export SYNC_ALL_NO_SUBMODULES="$NO_SUBMODULES"
+export SYNC_ALL_VERBOSE="$VERBOSE"
+export SYNC_ALL_JSON="$JSON"
 
+require_runtime
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'run this inside a Git work tree'
 
 sync_here || {
@@ -171,11 +244,11 @@ sync_here || {
   fi
 }
 
-if [ -f .gitmodules ]; then
+if [ -f .gitmodules ] && [ "$NO_SUBMODULES" -eq 0 ]; then
   update_failed=0
   if [ "$INIT_SUBMODULES" -eq 1 ] && [ "$DRY_RUN" -eq 1 ]; then
-    printf '+ git submodule update --init --recursive\n'
-  elif [ "$INIT_SUBMODULES" -eq 1 ] && ! git submodule update --init --recursive; then
+    print_command git submodule update --init --recursive
+  elif [ "$INIT_SUBMODULES" -eq 1 ] && ! run git submodule update --init --recursive; then
     printf '\n!! some submodules failed to init/update (see above) — continuing\n\n' >&2
     update_failed=1
   elif git submodule status --recursive 2>/dev/null | grep -q '^-'; then
@@ -186,7 +259,7 @@ if [ -f .gitmodules ]; then
   skips="$(mktemp)"
   trap 'rm -f "$failures" "$skips"' EXIT
 
-  git submodule foreach --quiet --recursive "
+  run git submodule foreach --quiet --recursive "
     bash '$SELF' --submodule \"\$name\" \"\$toplevel\"; rc=\$?
     if [ \$rc -eq $RC_NO_SUCH_BRANCH ]; then echo \"\$displaypath\" >>'$skips'
     elif [ \$rc -ne 0 ]; then echo \"\$displaypath\" >>'$failures'
@@ -205,4 +278,5 @@ if [ -f .gitmodules ]; then
   [ "$update_failed" -eq 0 ] || exit 1
 fi
 
+emit_summary
 exit 0

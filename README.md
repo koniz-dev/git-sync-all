@@ -27,6 +27,9 @@ same prefix:
 ./install.sh --completions
 ```
 
+The installer refuses to replace an existing command or completion file. Pass
+`--force` only when you intentionally want to replace a prior installation.
+
 To remove the command, run `./uninstall.sh`; add `--completions` to remove the
 completion files too. Neither command removes directories or other files.
 
@@ -53,6 +56,7 @@ It installs the Bash command and a `git-sync-all.cmd` wrapper in
 terminal and run `git sync-all --version`. The wrapper runs the command with
 Git Bash, so Git's Unix utilities (`mktemp`, `sed`, `wc`, and `tr`) are
 available without a separate dependency.
+It also refuses to replace an existing installation unless `-Force` is passed.
 
 Remove the Windows installation with:
 
@@ -78,6 +82,10 @@ git sync-all --dry-run    # print checkout and pull commands only
 git sync-all --rebase     # rebase local commits while pulling
 git sync-all --merge      # merge while pulling
 git sync-all --init-submodules  # initialize missing submodules, then sync them
+git sync-all --fetch-only # fetch remote refs without changing the checkout
+git sync-all --no-submodules  # sync the superproject only
+git sync-all --verbose     # print the Git commands being run
+git sync-all --json        # emit a final JSON summary to stdout
 ```
 
 With an explicit branch, a repository that does not have that branch locally
@@ -98,6 +106,20 @@ The command refuses to change a repository with tracked or untracked changes.
 Use `--allow-dirty` only when you understand the checkout and pull operations
 will not overwrite your work. Missing submodules are skipped by default; use
 `--init-submodules` to clone and update them from the URLs in `.gitmodules`.
+
+`--fetch-only` does not inspect or change the checkout. `--no-submodules`
+skips all submodule work. `--json` reserves standard output for one final JSON
+summary; command and Git output is sent to standard error. `--verbose` prints
+commands as they execute.
+
+## Requirements
+
+- Git 2.20 or later
+- Bash 3.2 or later (macOS, Linux, Git Bash, or WSL)
+
+The tool is intended for local development workspaces. Updating a submodule to
+a newer branch commit can make its superproject show a modified gitlink; commit
+that gitlink separately if you intend to record the new submodule revision.
 
 ## Shell completion
 

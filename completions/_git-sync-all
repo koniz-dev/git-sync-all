@@ -5,6 +5,14 @@ _git-sync-all() {
     '--version[Show version]' \
     '--dry-run[Print actions without changing the repository]' \
     '--rebase[Pull with rebase]' \
+    '--merge[Pull with merge]' \
+    '--ff-only[Pull only when a fast-forward is possible]' \
+    '--allow-dirty[Allow repositories with local changes]' \
+    '--init-submodules[Initialize missing submodules]' \
+    '--fetch-only[Fetch without checkout or pull]' \
+    '--no-submodules[Skip submodules]' \
+    '--verbose[Print executed commands]' \
+    '--json[Emit a JSON summary]' \
     '1:branch name:->branches'
   if [[ $state == branches ]]; then
     _git-branches

@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  attestations: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+      - name: Verify the signed release tag
+        run: git verify-tag "$GITHUB_REF_NAME"
+      - name: Build source archive and checksum
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir dist
+          git archive --format=tar.gz --prefix="git-sync-all-${version}/" \
+            --output="dist/git-sync-all-${version}.tar.gz" "$GITHUB_REF_NAME"
+          sha256sum "dist/git-sync-all-${version}.tar.gz" > "dist/git-sync-all-${version}.tar.gz.sha256"
+      - name: Attest the source archive
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.1.0
+        with:
+          subject-path: dist/*.tar.gz
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes

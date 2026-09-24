@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
 
 permissions:
   contents: read
@@ -11,9 +13,9 @@ permissions:
 jobs:
   shellcheck:
     name: ShellCheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install --yes shellcheck
       - name: Run ShellCheck
@@ -25,21 +27,54 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-14, ubuntu-22.04, windows-2022]
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Run integration tests
         run: |
           bash -n bin/git-sync-all install.sh uninstall.sh test/test-git-sync-all.sh
           bash test/test-git-sync-all.sh
-      - name: Verify the Windows installer and Git subcommand
+      - name: Verify the Windows installer, subcommand, and uninstaller
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $prefix = Join-Path $env:RUNNER_TEMP 'git-sync-all-bin'
           .\install.ps1 -Prefix $prefix -NoPath
+          $overwriteBlocked = $false
+          try {
+            .\install.ps1 -Prefix $prefix -NoPath
+          } catch {
+            $overwriteBlocked = $true
+          }
+          if (-not $overwriteBlocked) { throw 'installer overwrote an existing installation without -Force' }
+          .\install.ps1 -Prefix $prefix -NoPath -Force
           $env:PATH = "$prefix;$env:PATH"
           git sync-all --version
+          .\uninstall.ps1 -Prefix $prefix
+          if ((Test-Path "$prefix\git-sync-all") -or (Test-Path "$prefix\git-sync-all.cmd")) {
+            throw 'uninstaller did not remove the Windows installation'
+          }
+      - name: Install the Homebrew formula
+        if: runner.os == 'macOS'
+        run: |
+          brew tap koniz-dev/tap https://github.com/koniz-dev/homebrew-tap
+          brew install git-sync-all
+          git-sync-all --version
+
+  latest:
+    if: github.event_name == 'schedule'
+    name: ${{ matrix.os }} latest smoke tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - run: bash test/test-git-sync-all.sh

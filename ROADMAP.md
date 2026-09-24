@@ -58,16 +58,16 @@ on the Bash available on the development machine.
   `--allow-dirty` is passed.
 - [x] Require `--init-submodules` before cloning or updating uninitialized
   submodules.
-- [ ] Refuse to overwrite an existing installation unless `--force` is passed.
-- [ ] Pin GitHub Actions to full commit SHAs and keep the checkout action
+- [x] Refuse to overwrite an existing installation unless `--force` is passed.
+- [x] Pin GitHub Actions to full commit SHAs and keep the checkout action
   current.
-- [ ] Add tests for dirty trees, divergent branches, force-pushes, rebase
+- [x] Add tests for dirty trees, divergent branches, force-pushes, rebase
   conflicts, paths containing spaces or quotes, and dry-run immutability.
-- [ ] Test the PowerShell uninstaller, completion installation, and Homebrew
+- [x] Test the PowerShell uninstaller, completion installation, and Homebrew
   formula end-to-end in CI.
 - [ ] Publish signed tags, checksums, and release provenance.
-- [ ] Add `--json`, `--verbose`, `--fetch-only`, and `--no-submodules` for
+- [x] Add `--json`, `--verbose`, `--fetch-only`, and `--no-submodules` for
   automation and diagnostics.
-- [ ] Document minimum supported Git and Bash versions.
-- [ ] Pin a regression-test matrix to supported platform versions while running
+- [x] Document minimum supported Git and Bash versions.
+- [x] Pin a regression-test matrix to supported platform versions while running
   a scheduled job against current runner images.

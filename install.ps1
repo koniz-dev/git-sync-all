@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
   [string]$Prefix = (Join-Path $HOME '.local\bin'),
-  [switch]$NoPath
+  [switch]$NoPath,
+  [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,12 +33,17 @@ function Find-GitBash {
 $sourceDirectory = Split-Path -Parent $PSCommandPath
 $targetDirectory = [System.IO.Path]::GetFullPath($Prefix)
 $bashPath = Find-GitBash
+$commandPath = Join-Path $targetDirectory 'git-sync-all'
+$wrapperPath = Join-Path $targetDirectory 'git-sync-all.cmd'
+
+if (-not $Force -and ((Test-Path -LiteralPath $commandPath) -or (Test-Path -LiteralPath $wrapperPath))) {
+  throw "git-sync-all is already installed at $targetDirectory. Pass -Force to replace it."
+}
 
 New-Item -ItemType Directory -Force -Path $targetDirectory | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceDirectory 'bin\git-sync-all') `
-  -Destination (Join-Path $targetDirectory 'git-sync-all') -Force
+  -Destination $commandPath -Force
 
-$wrapperPath = Join-Path $targetDirectory 'git-sync-all.cmd'
 @"
 @echo off
 "$bashPath" "%~dp0git-sync-all" %*
