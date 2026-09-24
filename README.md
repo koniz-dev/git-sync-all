@@ -121,6 +121,19 @@ The tool is intended for local development workspaces. Updating a submodule to
 a newer branch commit can make its superproject show a modified gitlink; commit
 that gitlink separately if you intend to record the new submodule revision.
 
+## Release verification
+
+Release tags are signed with SSH and verified in CI against
+[`keys/allowed_signers`](keys/allowed_signers). Each GitHub release includes a
+source archive, a SHA-256 checksum, and a GitHub artifact attestation. Verify a
+tag locally with:
+
+```bash
+git config gpg.format ssh
+git config gpg.ssh.allowedSignersFile keys/allowed_signers
+git verify-tag v0.5.0
+```
+
 ## Shell completion
 
 For zsh, copy `completions/_git-sync-all` into a directory on `fpath`. For

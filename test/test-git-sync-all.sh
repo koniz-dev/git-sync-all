@@ -195,6 +195,13 @@ test_rebase_conflict() {
 
 test_special_paths_and_dry_run() {
   make_remote special-path
+  (
+    cd "$TMP_DIR/special-path-work"
+    printf '%s\n' 'quoted path' > "quote'file"
+    run_git add "quote'file"
+    run_git commit -qm 'Add quoted path'
+    run_git push -q "$TMP_DIR/special-path.git" main
+  )
   local clone="$TMP_DIR/clone with spaces"
   run_git clone -q "$TMP_DIR/special-path.git" "$clone"
   run_git clone -q "$TMP_DIR/special-path.git" "$TMP_DIR/special-path-update"
@@ -210,6 +217,7 @@ test_special_paths_and_dry_run() {
   [ "$(run_git -C "$clone" rev-parse HEAD)" = "$before" ] \
     || fail 'dry-run changed HEAD'
   assert_file_contains "$clone/README" 'special-path initial'
+  assert_file_contains "$clone/quote'file" 'quoted path'
   [[ "$output" == *'+ git pull --ff-only '* ]] || fail 'dry-run did not report pull'
 }
 
@@ -236,7 +244,7 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Bash completion'
   [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'installer did not install the Zsh completion'
-  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.5.0-dev' ] \
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.5.0' ] \
     || fail 'installed command did not report the expected version'
 
   if bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null 2>&1; then

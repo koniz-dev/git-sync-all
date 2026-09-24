@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-readonly VERSION="0.5.0-dev"
+readonly VERSION="0.5.0"
 readonly RC_NO_SUCH_BRANCH=3
 readonly RC_DIRTY_WORKTREE=4
 DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
