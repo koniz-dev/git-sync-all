@@ -83,16 +83,15 @@ on the Bash available on the development machine.
 - [x] Test quoted repository paths on Windows or document the platform
   limitation explicitly.
 - [x] Align the documented Windows support claim with the actual CI targets.
-- [x] Document release-signing-key rotation.
-- [ ] Add an independently controlled backup public signing key to
-  `keys/allowed_signers` and verify a release signed by it.
+- [x] Document release-signing-key rotation and accept the single-signer
+  policy for this project. Add an independently controlled backup key only
+  before retiring the current signer.
 
 ### Residual risks
 
-- **Release-signing continuity:** one public signer is currently trusted. A
-  second, independently controlled public key is required before the current
-  signer can be retired. This cannot be safely created or configured without
-  its owner.
+- **Release-signing continuity:** one public signer is currently trusted. This
+  project accepts that operational dependency; add an independently controlled
+  public key before retiring the current signer.
 - **Windows coverage:** CI exercises Git Bash on Windows Server 2022, not a
   native Windows 11 machine. The README describes this boundary; Windows 11
   should be added as a real test target when such a runner is available.
@@ -110,5 +109,5 @@ on the Bash available on the development machine.
   Windows instead of falling back to an unrelated `bash` on `PATH`.
 - [x] Align the Windows installation wording with the environments actually
   verified by CI.
-- [ ] Update the Homebrew formula to install the v0.7.0 release archive and
+- [x] Update the Homebrew formula to install the v0.7.0 release archive and
   verify it in the tap.
