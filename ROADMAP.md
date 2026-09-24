@@ -31,7 +31,8 @@ gh release create v0.1.0 --title "v0.1.0" --generate-notes
 Ensure the command works on macOS, Linux, and Windows instead of relying only
 on the Bash available on the development machine.
 
-- [x] Define the official support matrix: macOS, Ubuntu LTS, and Windows 11.
+- [x] Define the official support matrix: macOS, Ubuntu LTS, and Windows with
+  Git Bash, WSL, or Git for Windows.
 - [x] Keep the Bash implementation for macOS/Linux and Git Bash/WSL on Windows.
 - [x] Add a PowerShell installer (`install.ps1`) for native Windows use.
 - [x] Ensure `git-sync-all` is recognized as a Git subcommand from PATH on Windows.
@@ -39,8 +40,8 @@ on the Bash available on the development machine.
   `mktemp`, `sed`, `wc`, and `tr`.
 - [x] If Git for Windows is insufficiently compatible, move orchestration to
   PowerShell or release a cross-platform binary.
-- [x] Add a GitHub Actions matrix that runs smoke tests on `macos-latest`,
-  `ubuntu-latest`, and `windows-latest`.
+- [x] Add a GitHub Actions matrix that runs smoke tests on macOS, Ubuntu, and
+  Windows runners.
 - [x] Document the tested environments and supported fallbacks in the README
   (Git Bash/WSL on Windows).
 
@@ -76,10 +77,23 @@ on the Bash available on the development machine.
 
 - [x] Refresh `origin` refs before resolving default or requested branches.
 - [x] Make `--json` report skipped and failed outcomes accurately.
-- [ ] Make the release workflow idempotent when re-run.
+- [x] Make the release workflow idempotent when re-run.
 - [x] Make the PowerShell installer resilient to Unicode paths and avoid
   selecting an unrelated `bash` executable from `PATH`.
-- [ ] Test quoted repository paths on Windows or document the platform
+- [x] Test quoted repository paths on Windows or document the platform
   limitation explicitly.
-- [ ] Align the documented Windows support claim with a Windows 11 test target.
+- [x] Align the documented Windows support claim with the actual CI targets.
 - [ ] Document release-signing key rotation and configure a backup signer.
+
+### Residual risks
+
+- **Release-signing continuity:** one public signer is currently trusted. A
+  second, independently controlled public key is required before the current
+  signer can be retired. This cannot be safely created or configured without
+  its owner.
+- **Windows coverage:** CI exercises Git Bash on Windows Server 2022, not a
+  native Windows 11 machine. The README describes this boundary; Windows 11
+  should be added as a real test target when such a runner is available.
+- **Release-provider behavior:** the idempotent release helper is unit-tested
+  with a local `gh` mock. Its live GitHub behavior remains covered only when a
+  release workflow runs with GitHub-provided credentials.

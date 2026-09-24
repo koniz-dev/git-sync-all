@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMMAND="$ROOT_DIR/bin/git-sync-all"
+source "$ROOT_DIR/scripts/publish-release-assets.sh"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/git-sync-all-test.XXXXXX")"
 
 cleanup() {
@@ -267,7 +268,7 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Bash completion'
   [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'installer did not install the Zsh completion'
-  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.5.0' ] \
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.6.0' ] \
     || fail 'installed command did not report the expected version'
 
   if bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null 2>&1; then
@@ -316,7 +317,11 @@ test_nested_submodules() {
 
   (
     cd "$root_clone"
-    "$COMMAND"
+    local quoted_command="$TMP_DIR/tool's-bin/git-sync-all"
+    mkdir -p "$(dirname "$quoted_command")"
+    cp "$COMMAND" "$quoted_command"
+    chmod +x "$quoted_command"
+    "$quoted_command"
   )
   assert_file_contains "$root_clone/modules/child/vendor/grandchild/README" 'grandchild updated'
 
@@ -334,6 +339,26 @@ test_nested_submodules() {
   assert_file_contains "$root_uninitialized/modules/child/vendor/grandchild/README" 'grandchild updated'
 }
 
+test_release_publisher() {
+  local calls="$TMP_DIR/release-publisher-calls"
+
+  gh() {
+    printf '%s\n' "$*" >> "$calls"
+    if [ "$1" = release ] && [ "$2" = view ]; then
+      [ "${FAKE_RELEASE_EXISTS:-0}" = 1 ]
+    fi
+  }
+
+  FAKE_RELEASE_EXISTS=0
+  publish_release_assets "v-test" "first-asset" "second-asset"
+  assert_file_contains "$calls" "release create v-test first-asset second-asset --generate-notes"
+
+  : > "$calls"
+  FAKE_RELEASE_EXISTS=1
+  publish_release_assets "v-test" "first-asset" "second-asset"
+  assert_file_contains "$calls" "release upload v-test first-asset second-asset --clobber"
+}
+
 test_regular_repository
 test_missing_branch
 test_remote_branch_refresh
@@ -348,4 +373,5 @@ test_special_paths_and_dry_run
 test_automation_options
 test_installer_and_uninstaller
 test_nested_submodules
+test_release_publisher
 printf 'All git-sync-all integration tests passed.\n'

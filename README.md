@@ -66,10 +66,11 @@ Remove the Windows installation with:
 
 ## Supported environments
 
-The supported environments are macOS, Ubuntu LTS, and Windows 11. On Windows,
-use Git Bash, WSL, or the PowerShell installer with Git for Windows. CI runs
-the syntax and integration suite on `macos-latest`, `ubuntu-latest`, and
-`windows-latest` (with Git Bash).
+The supported environments are macOS, Ubuntu LTS, and Windows with Git Bash,
+WSL, or the PowerShell installer plus Git for Windows. CI runs its pinned suite
+on macOS 14, Ubuntu 22.04, and Windows Server 2022 (with Git Bash), plus a
+scheduled smoke suite on the current hosted runner images. Windows 11 itself is
+not yet a CI target.
 
 ## Usage
 
@@ -134,8 +135,13 @@ tag locally with:
 ```bash
 git config gpg.format ssh
 git config gpg.ssh.allowedSignersFile keys/allowed_signers
-git verify-tag v0.5.0
+git verify-tag v0.6.0
 ```
+
+To rotate a release signer, add the replacement public key to
+`keys/allowed_signers`, verify a signed test tag in CI, and retain the prior
+key until at least one release has been verified with the replacement. A backup
+signer must be added before the current signing key is retired.
 
 ## Shell completion
 
