@@ -19,6 +19,9 @@ FETCH_ONLY="${SYNC_ALL_FETCH_ONLY:-0}"
 NO_SUBMODULES="${SYNC_ALL_NO_SUBMODULES:-0}"
 VERBOSE="${SYNC_ALL_VERBOSE:-0}"
 JSON="${SYNC_ALL_JSON:-0}"
+OUTCOME="ok"
+REASON=""
+SUBMODULE_SKIPS=0
 
 usage() {
   cat <<'EOF'
@@ -96,14 +99,25 @@ json_string() {
 
 emit_summary() {
   [ "$JSON" -eq 1 ] || return 0
-  printf '{"status":"ok","branch":'
+  printf '{"status":'
+  json_string "$OUTCOME"
+  printf ',"reason":'
+  if [ -n "$REASON" ]; then json_string "$REASON"; else printf 'null'; fi
+  printf ',"branch":'
   if [ -n "${SYNC_ALL_BRANCH:-}" ]; then json_string "$SYNC_ALL_BRANCH"; else printf 'null'; fi
   printf ',"pull_mode":'
   json_string "$PULL_MODE"
-  printf ',"dry_run":%s,"fetch_only":%s,"submodules":%s}\n' \
+  printf ',"dry_run":%s,"fetch_only":%s,"submodules":%s,"submodule_skips":%s}\n' \
     "$([ "$DRY_RUN" -eq 1 ] && echo true || echo false)" \
     "$([ "$FETCH_ONLY" -eq 1 ] && echo true || echo false)" \
-    "$([ "$NO_SUBMODULES" -eq 1 ] && echo false || echo true)"
+    "$([ "$NO_SUBMODULES" -eq 1 ] && echo false || echo true)" \
+    "$SUBMODULE_SKIPS"
+}
+
+refresh_origin() {
+  if git remote get-url origin >/dev/null 2>&1; then
+    run git fetch --prune origin
+  fi
 }
 
 default_branch() {
@@ -156,6 +170,7 @@ sync_here() {
     printf 'note: working tree is dirty — left untouched (use --allow-dirty to override)\n' >&2
     return "$RC_DIRTY_WORKTREE"
   fi
+  refresh_origin
   b="$(target_branch "${1:-}")" || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
 
@@ -237,9 +252,14 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'run this inside a Gi
 sync_here || {
   rc=$?
   if [ "$rc" -eq "$RC_NO_SUCH_BRANCH" ]; then
+    OUTCOME="skipped"
+    REASON="branch_missing"
     printf "note: superproject has no branch '%s' — left on %s\n\n" \
       "${SYNC_ALL_BRANCH:-}" "$(git symbolic-ref --short HEAD 2>/dev/null || echo '?')" >&2
   else
+    OUTCOME="failed"
+    REASON="dirty_worktree"
+    emit_summary
     exit "$rc"
   fi
 }
@@ -266,16 +286,26 @@ if [ -f .gitmodules ] && [ "$NO_SUBMODULES" -eq 0 ]; then
     fi"
 
   if [ -s "$skips" ]; then
+    SUBMODULE_SKIPS="$(wc -l <"$skips" | tr -d ' ')"
+    [ "$OUTCOME" = "ok" ] && OUTCOME="partial"
     printf "\n-- no '%s' branch, left untouched (%s):\n" \
-      "${SYNC_ALL_BRANCH:-}" "$(wc -l <"$skips" | tr -d ' ')" >&2
+      "${SYNC_ALL_BRANCH:-}" "$SUBMODULE_SKIPS" >&2
     sed 's/^/  - /' "$skips" >&2
   fi
   if [ -s "$failures" ]; then
+    OUTCOME="failed"
+    REASON="submodule_failure"
     printf '\n!! failed to sync these submodules (%s):\n' "$(wc -l <"$failures" | tr -d ' ')" >&2
     sed 's/^/  - /' "$failures" >&2
+    emit_summary
     exit 1
   fi
-  [ "$update_failed" -eq 0 ] || exit 1
+  if [ "$update_failed" -ne 0 ]; then
+    OUTCOME="failed"
+    REASON="submodule_update_failure"
+    emit_summary
+    exit 1
+  fi
 fi
 
 emit_summary

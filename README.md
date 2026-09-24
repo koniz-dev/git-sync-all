@@ -102,6 +102,9 @@ merge commit and stops if local and upstream histories have diverged. Pass
 `--rebase` to rebase local commits, or `--merge` to explicitly allow a merge,
 for the superproject and every submodule.
 
+Before resolving a branch, the command fetches and prunes `origin` so a branch
+created remotely can be selected in the same invocation.
+
 The command refuses to change a repository with tracked or untracked changes.
 Use `--allow-dirty` only when you understand the checkout and pull operations
 will not overwrite your work. Missing submodules are skipped by default; use

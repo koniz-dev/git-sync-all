@@ -76,6 +76,29 @@ test_missing_branch() {
     || fail 'a missing branch changed the superproject'
   [[ "$output" == *"superproject has no branch 'feature/absent'"* ]] \
     || fail 'a missing branch was not reported'
+  output="$(cd "$TMP_DIR/missing-branch-clone" && "$COMMAND" --json feature/absent 2>/dev/null)"
+  [[ "$output" == *'"status":"skipped"'* && "$output" == *'"reason":"branch_missing"'* ]] \
+    || fail 'JSON did not report a missing branch as skipped'
+}
+
+test_remote_branch_refresh() {
+  make_remote remote-branch
+  run_git clone -q "$TMP_DIR/remote-branch.git" "$TMP_DIR/remote-branch-clone"
+  run_git clone -q "$TMP_DIR/remote-branch.git" "$TMP_DIR/remote-branch-update"
+  (
+    cd "$TMP_DIR/remote-branch-update"
+    run_git checkout -qb feature/new
+    printf '%s\n' 'new remote branch' > FEATURE
+    run_git add FEATURE
+    run_git commit -qm 'Add remote branch'
+    run_git push -qu origin feature/new
+  )
+  (
+    cd "$TMP_DIR/remote-branch-clone"
+    "$COMMAND" feature/new
+  )
+  [ "$(run_git -C "$TMP_DIR/remote-branch-clone" branch --show-current)" = 'feature/new' ] \
+    || fail 'new remote branch was not discovered after refresh'
 }
 
 test_missing_remote() {
@@ -313,6 +336,7 @@ test_nested_submodules() {
 
 test_regular_repository
 test_missing_branch
+test_remote_branch_refresh
 test_missing_remote
 test_rebase_option
 test_ff_only_default

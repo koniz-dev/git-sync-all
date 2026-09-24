@@ -71,3 +71,15 @@ on the Bash available on the development machine.
 - [x] Document minimum supported Git and Bash versions.
 - [x] Pin a regression-test matrix to supported platform versions while running
   a scheduled job against current runner images.
+
+## v0.6.0 — Correctness and operational resilience
+
+- [ ] Refresh `origin` refs before resolving default or requested branches.
+- [ ] Make `--json` report skipped and failed outcomes accurately.
+- [ ] Make the release workflow idempotent when re-run.
+- [ ] Make the PowerShell installer resilient to Unicode paths and avoid
+  selecting an unrelated `bash` executable from `PATH`.
+- [ ] Test quoted repository paths on Windows or document the platform
+  limitation explicitly.
+- [ ] Align the documented Windows support claim with a Windows 11 test target.
+- [ ] Document release-signing key rotation and configure a backup signer.

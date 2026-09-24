@@ -8,11 +8,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Find-GitBash {
-  $bash = Get-Command bash -ErrorAction SilentlyContinue
-  if ($bash) {
-    return $bash.Source
-  }
-
   $git = Get-Command git -ErrorAction SilentlyContinue
   if ($git) {
     $gitDirectory = Split-Path -Parent $git.Source
@@ -25,6 +20,11 @@ function Find-GitBash {
         return $candidate
       }
     }
+  }
+
+  $bash = Get-Command bash -ErrorAction SilentlyContinue
+  if ($bash) {
+    return $bash.Source
   }
 
   throw 'Git Bash was not found. Install Git for Windows, then run this installer again.'
@@ -44,10 +44,13 @@ New-Item -ItemType Directory -Force -Path $targetDirectory | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceDirectory 'bin\git-sync-all') `
   -Destination $commandPath -Force
 
-@"
+$wrapper = @"
 @echo off
+chcp 65001 >nul
 "$bashPath" "%~dp0git-sync-all" %*
-"@ | Set-Content -LiteralPath $wrapperPath -Encoding ascii
+"@
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($wrapperPath, $wrapper, $utf8NoBom)
 
 if (-not $NoPath) {
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
