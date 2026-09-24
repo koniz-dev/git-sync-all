@@ -61,6 +61,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew tap koniz-dev/tap https://github.com/koniz-dev/homebrew-tap
+          brew trust --formula koniz-dev/tap/git-sync-all
           brew install git-sync-all
           git-sync-all --version
 

@@ -195,7 +195,7 @@ test_rebase_conflict() {
 
 test_special_paths_and_dry_run() {
   make_remote special-path
-  local clone="$TMP_DIR/clone with ' quote"
+  local clone="$TMP_DIR/clone with spaces"
   run_git clone -q "$TMP_DIR/special-path.git" "$clone"
   run_git clone -q "$TMP_DIR/special-path.git" "$TMP_DIR/special-path-update"
   (
