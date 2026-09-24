@@ -65,7 +65,7 @@ on the Bash available on the development machine.
   conflicts, paths containing spaces or quotes, and dry-run immutability.
 - [x] Test the PowerShell uninstaller, completion installation, and Homebrew
   formula end-to-end in CI.
-- [ ] Publish signed tags, checksums, and release provenance.
+- [x] Publish signed tags, checksums, and release provenance.
 - [x] Add `--json`, `--verbose`, `--fetch-only`, and `--no-submodules` for
   automation and diagnostics.
 - [x] Document minimum supported Git and Bash versions.
