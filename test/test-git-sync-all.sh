@@ -102,6 +102,33 @@ test_rebase_option() {
     || fail '--rebase did not select git pull --rebase'
 }
 
+test_ff_only_default() {
+  make_remote ff-only
+  run_git clone -q "$TMP_DIR/ff-only.git" "$TMP_DIR/ff-only-clone"
+  local output
+  output="$(cd "$TMP_DIR/ff-only-clone" && "$COMMAND" --dry-run 2>&1)"
+  [[ "$output" == *'+ git pull --ff-only '* ]] \
+    || fail 'default pull strategy was not fast-forward only'
+}
+
+test_dirty_repository() {
+  make_remote dirty
+  run_git clone -q "$TMP_DIR/dirty.git" "$TMP_DIR/dirty-clone"
+  printf '%s\n' 'uncommitted work' >> "$TMP_DIR/dirty-clone/README"
+  local before output rc
+  before="$(run_git -C "$TMP_DIR/dirty-clone" rev-parse HEAD)"
+  if output="$(cd "$TMP_DIR/dirty-clone" && "$COMMAND" 2>&1)"; then
+    rc=0
+  else
+    rc=$?
+  fi
+  [ "$rc" -eq 4 ] || fail 'a dirty repository did not return the expected error'
+  [ "$(run_git -C "$TMP_DIR/dirty-clone" rev-parse HEAD)" = "$before" ] \
+    || fail 'a dirty repository changed HEAD'
+  [[ "$output" == *'working tree is dirty — left untouched'* ]] \
+    || fail 'a dirty repository was not reported'
+}
+
 test_installer_and_uninstaller() {
   local prefix="$TMP_DIR/install-prefix"
   bash "$ROOT_DIR/install.sh" --prefix "$prefix" --completions >/dev/null
@@ -110,7 +137,7 @@ test_installer_and_uninstaller() {
     || fail 'installer did not install the Bash completion'
   [ -f "$prefix/share/zsh/site-functions/_git-sync-all" ] \
     || fail 'installer did not install the Zsh completion'
-  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.4.0' ] \
+  [ "$("$prefix/bin/git-sync-all" --version)" = 'git-sync-all 0.5.0-dev' ] \
     || fail 'installed command did not report the expected version'
 
   bash "$ROOT_DIR/uninstall.sh" --prefix "$prefix" --completions >/dev/null
@@ -133,6 +160,7 @@ test_nested_submodules() {
   run_git clone -q --bare "$child_work" "$child_remote"
 
   local root_work="$TMP_DIR/root-work" root_remote="$TMP_DIR/root.git" root_clone="$TMP_DIR/root-clone"
+  local root_uninitialized="$TMP_DIR/root-uninitialized"
   run_git init -q -b main "$root_work"
   (
     cd "$root_work"
@@ -141,6 +169,7 @@ test_nested_submodules() {
   )
   run_git clone -q --bare "$root_work" "$root_remote"
   run_git -c protocol.file.allow=always clone -q --recurse-submodules "$root_remote" "$root_clone"
+  run_git clone -q "$root_remote" "$root_uninitialized"
 
   run_git clone -q "$TMP_DIR/grandchild.git" "$TMP_DIR/grandchild-update"
   (
@@ -155,12 +184,27 @@ test_nested_submodules() {
     "$COMMAND"
   )
   assert_file_contains "$root_clone/modules/child/vendor/grandchild/README" 'grandchild updated'
+
+  local output
+  output="$(cd "$root_uninitialized" && "$COMMAND" 2>&1)"
+  [[ "$output" == *'uninitialized submodules were skipped'* ]] \
+    || fail 'uninitialized submodules were not reported'
+  [ ! -e "$root_uninitialized/modules/child/README" ] \
+    || fail 'submodules were initialized without --init-submodules'
+
+  (
+    cd "$root_uninitialized"
+    "$COMMAND" --init-submodules
+  )
+  assert_file_contains "$root_uninitialized/modules/child/vendor/grandchild/README" 'grandchild updated'
 }
 
 test_regular_repository
 test_missing_branch
 test_missing_remote
 test_rebase_option
+test_ff_only_default
+test_dirty_repository
 test_installer_and_uninstaller
 test_nested_submodules
 printf 'All git-sync-all integration tests passed.\n'

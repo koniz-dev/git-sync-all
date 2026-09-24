@@ -76,6 +76,8 @@ git sync-all              # default branch in every repository
 git sync-all feature/foo  # only repositories that already have feature/foo
 git sync-all --dry-run    # print checkout and pull commands only
 git sync-all --rebase     # rebase local commits while pulling
+git sync-all --merge      # merge while pulling
+git sync-all --init-submodules  # initialize missing submodules, then sync them
 ```
 
 With an explicit branch, a repository that does not have that branch locally
@@ -87,9 +89,15 @@ superproject's default-branch behavior.
 `--dry-run` does not initialise missing submodules; it reports the init command
 and simulates changes only for submodules that are already available locally.
 
-By default, `git sync-all` uses `git pull`, respecting the pull strategy
-configured in each repository. Pass `--rebase` to use `git pull --rebase` for
-the superproject and every submodule.
+By default, `git sync-all` uses `git pull --ff-only`: it will never create a
+merge commit and stops if local and upstream histories have diverged. Pass
+`--rebase` to rebase local commits, or `--merge` to explicitly allow a merge,
+for the superproject and every submodule.
+
+The command refuses to change a repository with tracked or untracked changes.
+Use `--allow-dirty` only when you understand the checkout and pull operations
+will not overwrite your work. Missing submodules are skipped by default; use
+`--init-submodules` to clone and update them from the URLs in `.gitmodules`.
 
 ## Shell completion
 

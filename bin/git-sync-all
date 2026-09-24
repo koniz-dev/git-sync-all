@@ -1,33 +1,48 @@
 #!/usr/bin/env bash
-# git-sync-all [--dry-run] [--rebase] [<branch>]
+# git-sync-all [--dry-run] [--ff-only|--rebase|--merge] [--allow-dirty]
+#              [--init-submodules] [<branch>]
 #
 # Sync a repository and all of its submodules. Install this executable on PATH
 # and Git exposes it as `git sync-all` automatically.
 set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-readonly VERSION="0.4.0"
+readonly VERSION="0.5.0-dev"
 readonly RC_NO_SUCH_BRANCH=3
+readonly RC_DIRTY_WORKTREE=4
 DRY_RUN="${SYNC_ALL_DRY_RUN:-0}"
-PULL_REBASE="${SYNC_ALL_REBASE:-0}"
+PULL_MODE="${SYNC_ALL_PULL_MODE:-ff-only}"
+ALLOW_DIRTY="${SYNC_ALL_ALLOW_DIRTY:-0}"
+INIT_SUBMODULES="${SYNC_ALL_INIT_SUBMODULES:-0}"
 
 usage() {
   cat <<'EOF'
-usage: git sync-all [--dry-run] [--rebase] [<branch>]
+usage: git sync-all [--dry-run] [--ff-only|--rebase|--merge] [--allow-dirty]
+                     [--init-submodules] [<branch>]
 
-  git sync-all                 each repo -> its default branch, then pull
-  git sync-all pmc             repos that have 'pmc' -> pmc, then pull
-  git sync-all --dry-run pmc   show what would change without changing it
-  git sync-all --rebase        pull each branch with rebase
+  git sync-all                   each repo -> default branch, fast-forward only
+  git sync-all pmc               repos that have 'pmc' -> pmc, then pull
+  git sync-all --dry-run pmc     show what would change without changing it
+  git sync-all --rebase          pull each branch with rebase
+  git sync-all --merge           pull each branch with a merge
+  git sync-all --init-submodules initialize missing submodules before syncing
 
 Repos lacking an explicitly requested branch are left untouched and reported
-at the end. A requested branch is never created locally.
+at the end. A requested branch is never created locally. Dirty repositories are
+left untouched unless --allow-dirty is passed.
 EOF
 }
 
 die() {
   printf 'git-sync-all: %s\n' "$*" >&2
   exit 2
+}
+
+require_flag() {
+  case "$2" in
+    0|1) ;;
+    *) die "$1 must be 0 or 1" ;;
+  esac
 }
 
 run() {
@@ -77,6 +92,11 @@ target_branch() {
 
 sync_here() {
   local b rc=0
+  if [ "$ALLOW_DIRTY" -ne 1 ] \
+    && [ -n "$(git status --porcelain=v1 --untracked-files=all)" ]; then
+    printf 'note: working tree is dirty — left untouched (use --allow-dirty to override)\n' >&2
+    return "$RC_DIRTY_WORKTREE"
+  fi
   b="$(target_branch "${1:-}")" || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
 
@@ -87,11 +107,11 @@ sync_here() {
   fi
 
   if git rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; then
-    if [ "$PULL_REBASE" -eq 1 ]; then
-      run git pull --rebase
-    else
-      run git pull
-    fi
+    case "$PULL_MODE" in
+      ff-only) run git pull --ff-only ;;
+      rebase) run git pull --rebase ;;
+      merge) run git pull --no-rebase ;;
+    esac
   else
     printf 'note: %s has no upstream — skipped pull\n' "$b" >&2
   fi
@@ -111,10 +131,11 @@ while [ "$#" -gt 0 ]; do
     -h|--help) usage; exit 0 ;;
     --version) printf 'git-sync-all %s\n' "$VERSION"; exit 0 ;;
     --dry-run) DRY_RUN=1 ;;
-    --rebase)
-      PULL_REBASE=1
-      export SYNC_ALL_REBASE=1
+    --ff-only|--rebase|--merge)
+      PULL_MODE="${1#--}"
       ;;
+    --allow-dirty) ALLOW_DIRTY=1 ;;
+    --init-submodules) INIT_SUBMODULES=1 ;;
     --) shift; break ;;
     -*) die "unknown option: $1" ;;
     *)
@@ -125,6 +146,18 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 [ "$#" -eq 0 ] || die 'only one branch may be supplied'
+
+require_flag SYNC_ALL_DRY_RUN "$DRY_RUN"
+require_flag SYNC_ALL_ALLOW_DIRTY "$ALLOW_DIRTY"
+require_flag SYNC_ALL_INIT_SUBMODULES "$INIT_SUBMODULES"
+case "$PULL_MODE" in
+  ff-only|rebase|merge) ;;
+  *) die 'SYNC_ALL_PULL_MODE must be ff-only, rebase, or merge' ;;
+esac
+export SYNC_ALL_DRY_RUN="$DRY_RUN"
+export SYNC_ALL_PULL_MODE="$PULL_MODE"
+export SYNC_ALL_ALLOW_DIRTY="$ALLOW_DIRTY"
+export SYNC_ALL_INIT_SUBMODULES="$INIT_SUBMODULES"
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die 'run this inside a Git work tree'
 
@@ -140,11 +173,13 @@ sync_here || {
 
 if [ -f .gitmodules ]; then
   update_failed=0
-  if [ "$DRY_RUN" -eq 1 ]; then
+  if [ "$INIT_SUBMODULES" -eq 1 ] && [ "$DRY_RUN" -eq 1 ]; then
     printf '+ git submodule update --init --recursive\n'
-  elif ! git submodule update --init --recursive; then
+  elif [ "$INIT_SUBMODULES" -eq 1 ] && ! git submodule update --init --recursive; then
     printf '\n!! some submodules failed to init/update (see above) — continuing\n\n' >&2
     update_failed=1
+  elif git submodule status --recursive 2>/dev/null | grep -q '^-'; then
+    printf 'note: uninitialized submodules were skipped (use --init-submodules to initialize them)\n' >&2
   fi
 
   failures="$(mktemp)"
@@ -152,7 +187,7 @@ if [ -f .gitmodules ]; then
   trap 'rm -f "$failures" "$skips"' EXIT
 
   git submodule foreach --quiet --recursive "
-    SYNC_ALL_DRY_RUN='$DRY_RUN' bash '$SELF' --submodule \"\$name\" \"\$toplevel\"; rc=\$?
+    bash '$SELF' --submodule \"\$name\" \"\$toplevel\"; rc=\$?
     if [ \$rc -eq $RC_NO_SUCH_BRANCH ]; then echo \"\$displaypath\" >>'$skips'
     elif [ \$rc -ne 0 ]; then echo \"\$displaypath\" >>'$failures'
     fi"
